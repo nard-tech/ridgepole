@@ -1,7 +1,7 @@
 describe 'Ridgepole::Client#dump' do
   context 'when there is a tables (dump some tables)' do
     before { restore_tables }
-    subject { client(tables: ['employees', 'salaries']) }
+    subject { client(tables: %w[employees salaries]) }
 
     it {
       expect(subject.dump).to match_fuzzy erbh(<<-EOS)
@@ -26,16 +26,16 @@ describe 'Ridgepole::Client#dump' do
 
   context 'when there is a tables (use ignore table)' do
     before { restore_tables }
-    subject {
+    subject do
       client(ignore_tables: [
-        /^clubs$/,
-        /^departments$/,
-        /^dept_emp$/,
-        /^dept_manager$/,
-        /^employee_clubs$/,
-        /^titles$/,
-      ])
-    }
+               /^clubs$/,
+               /^departments$/,
+               /^dept_emp$/,
+               /^dept_manager$/,
+               /^employee_clubs$/,
+               /^titles$/
+             ])
+    end
 
     it {
       expect(subject.dump).to match_fuzzy erbh(<<-EOS)

@@ -17,32 +17,29 @@ class Ridgepole::ExternalSqlExecuter
         until files.empty?
           ready = IO.select(files)
 
-          if ready
-            readable = ready[0]
+          next unless ready
+          readable = ready[0]
 
-            readable.each do |f|
-              begin
-                data = f.read_nonblock(1024)
-                next if data.nil?
-                data.chomp!
+          readable.each do |f|
+            begin
+              data = f.read_nonblock(1024)
+              next if data.nil?
+              data.chomp!
 
-                if f == stderr
-                  @logger.warn("[WARNING] #{script_basename}: #{data}")
-                else
-                  @logger.info("#{script_basename}: #{data}")
-                end
-              rescue EOFError
-                files.delete f
+              if f == stderr
+                @logger.warn("[WARNING] #{script_basename}: #{data}")
+              else
+                @logger.info("#{script_basename}: #{data}")
               end
+            rescue EOFError
+              files.delete f
             end
           end
         end
       rescue EOFError
       end
 
-      unless wait_thr.value.success?
-        raise "`#{@script}` execution failed"
-      end
+      raise "`#{@script}` execution failed" unless wait_thr.value.success?
     end
   end
 end

@@ -1,7 +1,7 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when database is empty' do
     let(:actual_dsl) { '' }
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -61,7 +61,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     subject { client }
 

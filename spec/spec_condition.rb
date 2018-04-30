@@ -15,7 +15,7 @@ module SpecCondition
     end
 
     def activerecord_5?
-      ActiveRecord::VERSION::MAJOR >= 5 and ActiveRecord::VERSION::MAJOR < 6
+      (ActiveRecord::VERSION::MAJOR >= 5) && (ActiveRecord::VERSION::MAJOR < 6)
     end
 
     def debug?
@@ -46,7 +46,7 @@ module SpecCondition
   def condition(*conds)
     conds.any? do |c|
       if c.is_a? Array
-        c.all? {|i| check_version_or_cond(i) }
+        c.all? { |i| check_version_or_cond(i) }
       else
         check_version_or_cond(c)
       end

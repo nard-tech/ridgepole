@@ -1,6 +1,6 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when create table' do
-    let(:dsl) {
+    let(:dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -60,9 +60,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "departments", primary_key: "dept_no", force: :cascade do |t|
           t.string "dept_name", limit: 40, null: false
@@ -103,14 +103,14 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     let(:expected_dsl) { dsl }
 
     before { client.diff(actual_dsl).migrate }
 
     it {
-      tempfile("#{File.basename __FILE__}.#{$$}") do |path|
+      tempfile("#{File.basename __FILE__}.#{$PROCESS_ID}") do |path|
         delta = client(log_file: path).diff(expected_dsl)
         expect(delta.differ?).to be_truthy
         expect(client.dump).to match_ruby actual_dsl

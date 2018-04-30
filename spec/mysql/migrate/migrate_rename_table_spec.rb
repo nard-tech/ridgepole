@@ -1,6 +1,6 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when rename table' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -60,9 +60,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -122,7 +122,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -137,7 +137,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
   end
 
   context 'when rename table (dry-run)' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "employees", primary_key: "emp_no", force: :cascade do |t|
           t.date   "birth_date", null: false
@@ -157,9 +157,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["first_name"], name: "first_name", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "employees2", primary_key: "emp_no", force: :cascade, renamed_from: 'employees' do |t|
           t.date   "birth_date", null: false
@@ -179,7 +179,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["first_name"], name: "first_name", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -197,7 +197,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
     before { restore_tables }
     subject { client }
 
-    let(:dsl) {
+    let(:dsl) do
       erbh(<<-EOS)
         create_table "employees2", primary_key: "emp_no", force: :cascade, renamed_from: 'not_employees' do |t|
           t.date   "birth_date", null: false
@@ -207,10 +207,10 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.date   "hire_date", null: false
         end
       EOS
-    }
+    end
 
     it {
-      expect(Ridgepole::Logger.instance).to receive(:warn).with("[WARNING] The table `not_employees` to be renamed does not exist.")
+      expect(Ridgepole::Logger.instance).to receive(:warn).with('[WARNING] The table `not_employees` to be renamed does not exist.')
       subject.diff(dsl)
     }
   end
@@ -219,7 +219,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
     before { subject.diff(dsl).migrate }
     subject { client }
 
-    let(:dsl) {
+    let(:dsl) do
       erbh(<<-EOS)
         create_table "employees2", primary_key: "emp_no", force: :cascade, renamed_from: 'employees' do |t|
           t.date   "birth_date", null: false
@@ -229,10 +229,10 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.date   "hire_date", null: false
         end
       EOS
-    }
+    end
 
     it {
-      expect(Ridgepole::Logger.instance).to receive(:warn).with("[WARNING] The table `employees` has already been renamed to the table `employees2`.")
+      expect(Ridgepole::Logger.instance).to receive(:warn).with('[WARNING] The table `employees` has already been renamed to the table `employees2`.')
       subject.diff(dsl)
     }
   end

@@ -5,7 +5,7 @@ class Ridgepole::Client
     ActiveRecord::Base.establish_connection(conn_spec)
 
     # XXX: If the required processing in class method?
-    if not @options.has_key?(:index_removed_drop_column) and Ridgepole::DefaultsLimit.adapter == :postgresql
+    if !@options.key?(:index_removed_drop_column) && (Ridgepole::DefaultsLimit.adapter == :postgresql)
       @options[:index_removed_drop_column] = true
     end
 
@@ -34,13 +34,13 @@ class Ridgepole::Client
 
     logger.verbose_info('# Parse DSL')
     expected_definition, expected_execute = @parser.parse(dsl, opts)
-    expected_definition.each do |table, definition|
+    expected_definition.each do |_table, definition|
       definition[:options][:options] ||= @options[:table_options] if @options[:table_options]
     end
     logger.verbose_info('# Load tables')
     current_definition, _current_execute = @parser.parse(@dumper.dump, opts)
     logger.verbose_info('# Compare definitions')
-    @diff.diff(current_definition, expected_definition, :execute => expected_execute)
+    @diff.diff(current_definition, expected_definition, execute: expected_execute)
   end
 
   class << self
@@ -58,7 +58,7 @@ class Ridgepole::Client
     end
 
     def dump(conn_spec, options = {}, &block)
-      client = self.new(conn_spec, options)
+      client = new(conn_spec, options)
       client.dump(&block)
     end
 

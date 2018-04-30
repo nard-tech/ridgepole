@@ -1,5 +1,5 @@
 class Ridgepole::Diff
-  PRIMARY_KEY_OPTIONS = %i(id limit default null precision scale collation unsigned comment).freeze
+  PRIMARY_KEY_OPTIONS = %i[id limit default null precision scale collation unsigned comment].freeze
 
   def initialize(options = {})
     @options = options
@@ -38,7 +38,7 @@ class Ridgepole::Diff
 
     scan_relation_info(relation_info)
 
-    unless @options[:merge] or @options[:skip_drop_table]
+    unless @options[:merge] || @options[:skip_drop_table]
       from.each do |table_name, from_attrs|
         next unless target?(table_name)
 
@@ -54,30 +54,29 @@ class Ridgepole::Diff
 
   private
 
-  def scan_table_rename(from, to, delta, options = {})
+  def scan_table_rename(from, to, delta, _options = {})
     to.dup.each do |table_name, to_attrs|
       next unless target?(table_name)
 
-      if (from_table_name = (to_attrs[:options] || {}).delete(:renamed_from))
-        from_table_name = from_table_name.to_s if from_table_name
+      next unless (from_table_name = (to_attrs[:options] || {}).delete(:renamed_from))
+      from_table_name = from_table_name.to_s if from_table_name
 
-        # Already renamed
-        if from[table_name]
-          @logger.warn("[WARNING] The table `#{from_table_name}` has already been renamed to the table `#{table_name}`.")
-          next
-        end
-
-        unless from[from_table_name]
-          @logger.warn("[WARNING] The table `#{from_table_name}` to be renamed does not exist.")
-          next
-        end
-
-        delta[:rename] ||= {}
-        delta[:rename][table_name] = from_table_name
-
-        from.delete(from_table_name)
-        to.delete(table_name)
+      # Already renamed
+      if from[table_name]
+        @logger.warn("[WARNING] The table `#{from_table_name}` has already been renamed to the table `#{table_name}`.")
+        next
       end
+
+      unless from[from_table_name]
+        @logger.warn("[WARNING] The table `#{from_table_name}` to be renamed does not exist.")
+        next
+      end
+
+      delta[:rename] ||= {}
+      delta[:rename][table_name] = from_table_name
+
+      from.delete(from_table_name)
+      to.delete(table_name)
     end
   end
 
@@ -112,12 +111,12 @@ class Ridgepole::Diff
     end
 
     [from, to].each do |table_attrs|
-      if table_attrs.has_key?(:default) and table_attrs[:default].nil?
+      if table_attrs.key?(:default) && table_attrs[:default].nil?
         table_attrs.delete(:default)
       end
     end
 
-    if @options[:mysql_change_table_options] and from_options != to_options and Ridgepole::ConnectionAdapters.mysql?
+    if @options[:mysql_change_table_options] && (from_options != to_options) && Ridgepole::ConnectionAdapters.mysql?
       from.delete(:options)
       to.delete(:options)
       table_delta[:table_options] = to_options
@@ -131,7 +130,7 @@ class Ridgepole::Diff
     pk_attrs = build_primary_key_attrs_if_changed(from, to, table_name)
     if pk_attrs
       if @options[:allow_pk_change]
-        table_delta[:primary_key_definition] = {change: {id: pk_attrs}}
+        table_delta[:primary_key_definition] = { change: { id: pk_attrs } }
       else
         @logger.warn(<<-EOS)
 [WARNING] Primary key definition of `#{table_name}` differ but `allow_pk_change` option is false
@@ -155,17 +154,17 @@ class Ridgepole::Diff
   def convert_to_primary_key_attrs(column_options)
     options = column_options.dup
 
-    if options[:id]
-      type = options.delete(:id)
-    else
-      type = Ridgepole::DSLParser::TableDefinition::DEFAULT_PRIMARY_KEY_TYPE
-    end
+    type = if options[:id]
+             options.delete(:id)
+           else
+             Ridgepole::DSLParser::TableDefinition::DEFAULT_PRIMARY_KEY_TYPE
+           end
 
-    if [:integer, :bigint].include?(type) && !options.key?(:default)
+    if %i[integer bigint].include?(type) && !options.key?(:default)
       options[:auto_increment] = true
     end
 
-    {type: type, options: options}
+    { type: type, options: options }
   end
 
   def build_attrs_if_changed(to_attrs, from_attrs, table_name, primary_key: false)
@@ -192,7 +191,7 @@ class Ridgepole::Diff
 
     scan_column_rename(from, to, definition_delta)
 
-    if table_options[:id] == false or table_options[:primary_key].is_a?(Array)
+    if (table_options[:id] == false) || table_options[:primary_key].is_a?(Array)
       priv_column_name = nil
     else
       priv_column_name = table_options[:primary_key] || 'id'
@@ -238,63 +237,59 @@ class Ridgepole::Diff
         definition_delta[:delete] ||= {}
         definition_delta[:delete][column_name] = from_attrs
 
-        if from_indices
-          modified_indices = []
+        next unless from_indices
+        modified_indices = []
 
-          from_indices.each do |name, attrs|
-            if attrs[:column_name].is_a?(Array) && attrs[:column_name].delete(column_name)
-              modified_indices << name
-            end
+        from_indices.each do |name, attrs|
+          if attrs[:column_name].is_a?(Array) && attrs[:column_name].delete(column_name)
+            modified_indices << name
           end
+        end
 
-          # In PostgreSQL, the index is deleted when the column is deleted
-          if @options[:index_removed_drop_column]
-            from_indices.reject! do |name, attrs|
-              modified_indices.include?(name)
-            end
+        # In PostgreSQL, the index is deleted when the column is deleted
+        if @options[:index_removed_drop_column]
+          from_indices.reject! do |name, _attrs|
+            modified_indices.include?(name)
           end
+        end
 
-          from_indices.reject! do |name, attrs|
-            attrs[:column_name].is_a?(Array) && attrs[:column_name].empty?
-          end
+        from_indices.reject! do |_name, attrs|
+          attrs[:column_name].is_a?(Array) && attrs[:column_name].empty?
         end
       end
     end
 
-    unless definition_delta.empty?
-      table_delta[:definition] = definition_delta
-    end
+    table_delta[:definition] = definition_delta unless definition_delta.empty?
   end
 
   def scan_column_rename(from, to, definition_delta)
     to.dup.each do |column_name, to_attrs|
-      if (from_column_name = (to_attrs[:options] || {}).delete(:renamed_from))
-        from_column_name = from_column_name.to_s if from_column_name
+      next unless (from_column_name = (to_attrs[:options] || {}).delete(:renamed_from))
+      from_column_name = from_column_name.to_s if from_column_name
 
-        # Already renamed
-        next if from[column_name]
+      # Already renamed
+      next if from[column_name]
 
-        unless from.has_key?(from_column_name)
-          raise "Column `#{from_column_name}` not found"
-        end
-
-        definition_delta[:rename] ||= {}
-        definition_delta[:rename][column_name] = from_column_name
-
-        from.delete(from_column_name)
-        to.delete(column_name)
+      unless from.key?(from_column_name)
+        raise "Column `#{from_column_name}` not found"
       end
+
+      definition_delta[:rename] ||= {}
+      definition_delta[:rename][column_name] = from_column_name
+
+      from.delete(from_column_name)
+      to.delete(column_name)
     end
   end
 
-  def scan_indices_change(from, to, to_columns, table_delta, from_table_options, to_table_options)
+  def scan_indices_change(from, to, to_columns, table_delta, _from_table_options, to_table_options)
     from = (from || {}).dup
     to = (to || {}).dup
     indices_delta = {}
 
     to.each do |index_name, to_attrs|
-      if index_name.kind_of?(Array)
-        from_index_name, from_attrs = from.find {|name, attrs| attrs[:column_name] == index_name }
+      if index_name.is_a?(Array)
+        from_index_name, from_attrs = from.find { |_name, attrs| attrs[:column_name] == index_name }
 
         if from_attrs
           from.delete(from_index_name)
@@ -334,15 +329,13 @@ class Ridgepole::Diff
       end
     end
 
-    unless indices_delta.empty?
-      table_delta[:indices] = indices_delta
-    end
+    table_delta[:indices] = indices_delta unless indices_delta.empty?
   end
 
   def target?(table_name)
-    if @options[:tables] and @options[:tables].include?(table_name)
+    if @options[:tables] && @options[:tables].include?(table_name)
       true
-    elsif @options[:ignore_tables] and @options[:ignore_tables].any? {|i| i =~ table_name }
+    elsif @options[:ignore_tables] && @options[:ignore_tables].any? { |i| i =~ table_name }
       false
     elsif @options[:tables]
       false
@@ -353,19 +346,17 @@ class Ridgepole::Diff
 
   def normalize_column_options!(attrs, primary_key = false)
     opts = attrs[:options]
-    opts[:null] = true if not opts.has_key?(:null) and not primary_key
+    opts[:null] = true if !opts.key?(:null) && !primary_key
     default_limit = Ridgepole::DefaultsLimit.default_limit(attrs[:type], @options)
     opts.delete(:limit) if opts[:limit] == default_limit
 
     # XXX: MySQL only?
-    if not opts.has_key?(:default) and not primary_key
-      opts[:default] = nil
-    end
+    opts[:default] = nil if !opts.key?(:default) && !primary_key
 
     if Ridgepole::ConnectionAdapters.mysql?
-      opts[:unsigned] = false unless opts.has_key?(:unsigned)
+      opts[:unsigned] = false unless opts.key?(:unsigned)
 
-      if attrs[:type] == :integer and opts[:limit] == Ridgepole::DefaultsLimit.default_limit(:bigint, @options)
+      if (attrs[:type] == :integer) && (opts[:limit] == Ridgepole::DefaultsLimit.default_limit(:bigint, @options))
         attrs[:type] = :bigint
         opts.delete(:limit)
       end
@@ -374,20 +365,18 @@ class Ridgepole::Diff
 
   def normalize_index_options!(opts)
     # XXX: MySQL only?
-    opts[:using] = :btree unless opts.has_key?(:using)
-    opts[:unique] = false unless opts.has_key?(:unique)
+    opts[:using] = :btree unless opts.key?(:using)
+    opts[:unique] = false unless opts.key?(:unique)
   end
 
   def columns_all_include?(expected_columns, actual_columns, table_options)
-    unless expected_columns.is_a?(Array)
-      return true
+    return true unless expected_columns.is_a?(Array)
+
+    if (table_options[:id] != false) && !table_options[:primary_key].is_a?(Array)
+      actual_columns += [(table_options[:primary_key] || 'id').to_s]
     end
 
-    if table_options[:id] != false and not table_options[:primary_key].is_a?(Array)
-      actual_columns = actual_columns + [(table_options[:primary_key] || 'id').to_s]
-    end
-
-    expected_columns.all? {|i| actual_columns.include?(i) }
+    expected_columns.all? { |i| actual_columns.include?(i) }
   end
 
   def scan_foreign_keys_change(from, to, table_delta, options)
@@ -439,13 +428,13 @@ class Ridgepole::Diff
     # default: 0, null: true  -> default: nil, null: false | default: nil, null: false (`default: nil` is ignored)
     # default: 0, null: true ->                null: false | default: nil, null: false (`default: nil` is ignored)
 
-    if from_attrs[:options][:default] != to_attrs[:options][:default] and from_attrs[:options][:null] == to_attrs[:options][:null]
+    if (from_attrs[:options][:default] != to_attrs[:options][:default]) && (from_attrs[:options][:null] == to_attrs[:options][:null])
       to_attrs = to_attrs.deep_dup
       to_attrs[:options].delete(:null)
     end
 
-    if Ridgepole::ConnectionAdapters.mysql? and ActiveRecord::VERSION::STRING =~ /\A5\.0\./
-      if to_attrs[:options][:default] == nil and to_attrs[:options][:null] == false
+    if Ridgepole::ConnectionAdapters.mysql? && ActiveRecord::VERSION::STRING =~ /\A5\.0\./
+      if to_attrs[:options][:default].nil? && (to_attrs[:options][:null] == false)
         Ridgepole::Logger.instance.warn("[WARNING] Table `#{table_name}`: `default: nil` is ignored when `null: false`. Please apply twice")
       end
     end
@@ -454,8 +443,8 @@ class Ridgepole::Diff
   end
 
   def compare_column_attrs(attrs1, attrs2)
-    attrs1 = attrs1.merge(:options => attrs1.fetch(:options, {}).dup)
-    attrs2 = attrs2.merge(:options => attrs2.fetch(:options, {}).dup)
+    attrs1 = attrs1.merge(options: attrs1.fetch(:options, {}).dup)
+    attrs2 = attrs2.merge(options: attrs2.fetch(:options, {}).dup)
     normalize_default_proc_options!(attrs1[:options], attrs2[:options])
 
     if @options[:skip_column_comment_change]
@@ -467,20 +456,20 @@ class Ridgepole::Diff
   end
 
   def normalize_default_proc_options!(opts1, opts2)
-    if opts1[:default].kind_of?(Proc) and opts2[:default].kind_of?(Proc)
+    if opts1[:default].is_a?(Proc) && opts2[:default].is_a?(Proc)
       opts1[:default] = opts1[:default].call
       opts2[:default] = opts2[:default].call
     end
   end
 
-  def diff_inspect(obj1, obj2, options = {})
+  def diff_inspect(obj1, obj2, _options = {})
     obj1 = Ridgepole::Ext::PpSortHash.extend_if_hash(obj1)
     obj2 = Ridgepole::Ext::PpSortHash.extend_if_hash(obj2)
 
     diffy = Diffy::Diff.new(
       obj1.pretty_inspect,
       obj2.pretty_inspect,
-      :diff => '-u'
+      diff: '-u'
     )
 
     diffy.to_s(@options[:color] ? :color : :text).gsub(/\s+\z/m, '')
@@ -499,8 +488,8 @@ class Ridgepole::Diff
     end
 
     relation_info[table_name] = {
-      :options => table_attr[:options] || {},
-      :columns => attrs_by_column,
+      options: table_attr[:options] || {},
+      columns: attrs_by_column
     }
   end
 
@@ -531,38 +520,35 @@ class Ridgepole::Diff
         next if table_options[:id] == false
 
         parent_column_info = {
-          :type => table_options[:id] || @options[:check_relation_type].to_sym,
-          :unsigned => table_options[:unsigned],
+          type: table_options[:id] || @options[:check_relation_type].to_sym,
+          unsigned: table_options[:unsigned]
         }
 
         child_column_info = {
-          :type => column_attrs[:type],
-          :unsigned => column_attrs.fetch(:options, {})[:unsigned],
+          type: column_attrs[:type],
+          unsigned: column_attrs.fetch(:options, {})[:unsigned]
         }
 
         [parent_column_info, child_column_info].each do |column_info|
-          unless column_info[:unsigned]
-            column_info.delete(:unsigned)
-          end
+          column_info.delete(:unsigned) unless column_info[:unsigned]
 
           # for PostgreSQL
           column_info[:type] = {
-            :serial => :integer,
-            :bigserial => :bigint,
+            serial: :integer,
+            bigserial: :bigint
           }.fetch(column_info[:type], column_info[:type])
         end
 
-        if parent_column_info != child_column_info
-          parent_label = "#{parent_table}.id"
-          child_label = "#{child_table}.#{column_name}"
-          label_len = [parent_label.length, child_label.length].max
+        next unless parent_column_info != child_column_info
+        parent_label = "#{parent_table}.id"
+        child_label = "#{child_table}.#{column_name}"
+        label_len = [parent_label.length, child_label.length].max
 
-          @logger.warn(<<-EOS % [label_len, parent_label, label_len, child_label])
+        @logger.warn(format(<<-EOS, label_len, parent_label, label_len, child_label))
 [WARNING] Relation column type is different.
   %*s: #{parent_column_info}
   %*s: #{child_column_info}
-          EOS
-        end
+        EOS
       end
     end
   end
@@ -570,7 +556,7 @@ class Ridgepole::Diff
   def check_table_existence(definition)
     return unless @options[:tables]
     @options[:tables].each do |table_name|
-      @logger.warn "[WARNING] '#{table_name}' definition is not found" unless definition.has_key?(table_name)
+      @logger.warn "[WARNING] '#{table_name}' definition is not found" unless definition.key?(table_name)
     end
   end
 end

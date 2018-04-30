@@ -1,5 +1,5 @@
 class Ridgepole::Delta
-  SCRIPT_NAME = '<Schema>'
+  SCRIPT_NAME = '<Schema>'.freeze
 
   def initialize(delta, options = {})
     @delta = delta
@@ -13,7 +13,7 @@ class Ridgepole::Delta
         migrate0(options)
       end
 
-      open(log_file, 'wb') {|f| f.puts JSON.pretty_generate(result) }
+      open(log_file, 'wb') { |f| f.puts JSON.pretty_generate(result) }
       result
     else
       migrate0(options)
@@ -44,12 +44,12 @@ class Ridgepole::Delta
     [
       pre_buf_for_fk,
       buf,
-      post_buf_for_fk,
-    ].map {|b| b.string.strip }.join("\n\n").strip
+      post_buf_for_fk
+    ].map { |b| b.string.strip }.join("\n\n").strip
   end
 
   def differ?
-    not script.empty? or not delta_execute.empty?
+    !script.empty? || !delta_execute.empty?
   end
 
   private
@@ -65,13 +65,13 @@ class Ridgepole::Delta
         ActiveRecord::Migration.disable_logging = true
         buf = StringIO.new
 
-        callback = proc do |sql, name|
+        callback = proc do |sql, _name|
           buf.puts sql if sql =~ /\A(CREATE|ALTER|DROP|RENAME)\b/i
         end
 
         eval_script_block = proc do
           Ridgepole::ExecuteExpander.without_operation(callback) do
-            migrated = eval_script(script, options.merge(:out => buf))
+            migrated = eval_script(script, options.merge(out: buf))
           end
         end
 
@@ -113,11 +113,11 @@ class Ridgepole::Delta
 
         execute_count = execute_sqls(options)
       end
-    rescue => e
+    rescue StandardError => e
       raise_exception(script, e)
     end
 
-    not script.empty? or execute_count.nonzero?
+    !script.empty? || execute_count.nonzero?
   end
 
   def execute_sqls(options = {})
@@ -131,12 +131,10 @@ class Ridgepole::Delta
 
       begin
         executable = cond.nil? || cond.call(ActiveRecord::Base.connection)
-      rescue => e
+      rescue StandardError => e
         errmsg = "[WARN] `#{sql}` is not executed: #{e.message}"
 
-        if @options[:debug]
-          errmsg = ([errmsg] + e.backtrace).join("\n\tfrom ")
-        end
+        errmsg = ([errmsg] + e.backtrace).join("\n\tfrom ") if @options[:debug]
 
         Ridgepole::Logger.instance.warn(errmsg)
 
@@ -155,7 +153,7 @@ class Ridgepole::Delta
       execute_count += 1
     end
 
-    return execute_count
+    execute_count
   end
 
   def with_pre_post_query(options = {})
@@ -179,7 +177,7 @@ class Ridgepole::Delta
       end
     end
 
-    return retval
+    retval
   end
 
   def raise_exception(script, org)
@@ -187,11 +185,11 @@ class Ridgepole::Delta
     digit_number = (lines.count + 1).to_s.length
     err_num = detect_error_line(org)
 
-    errmsg = lines.with_index.map {|l, i|
+    errmsg = lines.with_index.map do |l, i|
       line_num = i + 1
-      prefix = (line_num == err_num) ? '* ' : '  '
-      "#{prefix}%*d: #{l}" % [digit_number, line_num]
-    }
+      prefix = line_num == err_num ? '* ' : '  '
+      format("#{prefix}%*d: #{l}", digit_number, line_num)
+    end
 
     if err_num > 0
       from = err_num - 6
@@ -207,9 +205,9 @@ class Ridgepole::Delta
 
   def detect_error_line(e)
     rgx = /\A#{Regexp.escape(SCRIPT_NAME)}:(\d+):/
-    line = e.backtrace.find {|i| i =~ rgx }
+    line = e.backtrace.find { |i| i =~ rgx }
 
-    if line and (m = rgx.match(line))
+    if line && (m = rgx.match(line))
       m[1].to_i
     else
       0
@@ -235,7 +233,7 @@ create_table(#{table_name.inspect}, #{inspect_options_include_default_proc(optio
       EOS
     end
 
-    if @options[:create_table_with_index] and not indices.empty?
+    if @options[:create_table_with_index] && !indices.empty?
       indices.each do |index_name, index_attrs|
         append_add_index(table_name, index_name, index_attrs, buf, true)
       end
@@ -245,7 +243,7 @@ create_table(#{table_name.inspect}, #{inspect_options_include_default_proc(optio
 end
     EOS
 
-    if not @options[:create_table_with_index] and not indices.empty?
+    if !(@options[:create_table_with_index]) && !indices.empty?
       append_change_table(table_name, buf) do
         indices.each do |index_name, index_attrs|
           append_add_index(table_name, index_name, index_attrs, buf)
@@ -271,7 +269,7 @@ rename_table(#{from_table_name.inspect}, #{to_table_name.inspect})
     buf.puts
   end
 
-  def append_drop_table(table_name, attrs, buf)
+  def append_drop_table(table_name, _attrs, buf)
     buf.puts(<<-EOS)
 drop_table(#{table_name.inspect})
     EOS
@@ -295,7 +293,7 @@ execute "ALTER TABLE #{ActiveRecord::Base.connection.quote_table_name(table_name
     foreign_keys = attrs[:foreign_keys] || {}
     table_options = attrs[:table_options]
 
-    if not definition.empty? or not indices.empty? or not primary_key_definition.empty?
+    if !definition.empty? || !indices.empty? || !primary_key_definition.empty?
       append_change_table(table_name, buf) do
         append_delete_indices(table_name, indices, buf)
         append_change_definition(table_name, definition, buf)
@@ -308,9 +306,7 @@ execute "ALTER TABLE #{ActiveRecord::Base.connection.quote_table_name(table_name
       append_change_foreign_keys(table_name, foreign_keys, pre_buf_for_fk, post_buf_for_fk, @options)
     end
 
-    if table_options
-      append_change_table_options(table_name, table_options, buf)
-    end
+    append_change_table_options(table_name, table_options, buf) if table_options
 
     buf.puts
     pre_buf_for_fk.puts
@@ -374,8 +370,8 @@ rename_column(#{table_name.inspect}, #{from_column_name.inspect}, #{to_column_na
     options = attrs[:options] || {}
 
     # Fix for https://github.com/rails/rails/commit/7f0567b43b73b1bd1a16bfac9cd32fcbf1321b51
-    if Ridgepole::ConnectionAdapters.mysql? and ActiveRecord::VERSION::STRING !~ /\A5\.0\./
-      options[:comment] = nil unless options.has_key?(:comment)
+    if Ridgepole::ConnectionAdapters.mysql? && ActiveRecord::VERSION::STRING !~ /\A5\.0\./
+      options[:comment] = nil unless options.key?(:comment)
     end
 
     if @options[:bulk_change]
@@ -389,7 +385,7 @@ change_column(#{table_name.inspect}, #{column_name.inspect}, #{type.inspect}, #{
     end
   end
 
-  def append_remove_column(table_name, column_name, attrs, buf)
+  def append_remove_column(table_name, column_name, _attrs, buf)
     if @options[:bulk_change]
       buf.puts(<<-EOS)
   t.remove(#{column_name.inspect})
@@ -413,11 +409,11 @@ remove_column(#{table_name.inspect}, #{column_name.inspect})
     end
   end
 
-  def append_add_index(table_name, index_name, attrs, buf, force_bulk_change = false)
+  def append_add_index(table_name, _index_name, attrs, buf, force_bulk_change = false)
     column_name = attrs.fetch(:column_name)
     options = attrs[:options] || {}
 
-    if force_bulk_change or @options[:bulk_change]
+    if force_bulk_change || @options[:bulk_change]
       buf.puts(<<-EOS)
   t.index(#{column_name.inspect}, #{options.inspect})
       EOS
@@ -428,10 +424,10 @@ add_index(#{table_name.inspect}, #{column_name.inspect}, #{options.inspect})
     end
   end
 
-  def append_remove_index(table_name, index_name, attrs, buf)
+  def append_remove_index(table_name, _index_name, attrs, buf)
     column_name = attrs.fetch(:column_name)
     options = attrs[:options] || {}
-    target = options[:name] ? {:name => options[:name]} : column_name
+    target = options[:name] ? { name: options[:name] } : column_name
 
     if @options[:bulk_change]
       buf.puts(<<-EOS)
@@ -454,7 +450,7 @@ remove_index(#{table_name.inspect}, #{target.inspect})
     end
   end
 
-  def append_add_foreign_key(table_name, attrs, buf, options)
+  def append_add_foreign_key(table_name, attrs, buf, _options)
     to_table = attrs.fetch(:to_table)
     attrs_options = attrs[:options] || {}
 
@@ -463,15 +459,15 @@ add_foreign_key(#{table_name.inspect}, #{to_table.inspect}, #{attrs_options.insp
     EOS
   end
 
-  def append_remove_foreign_key(table_name, attrs, buf, options)
+  def append_remove_foreign_key(table_name, attrs, buf, _options)
     attrs_options = attrs[:options] || {}
     fk_name = attrs_options[:name]
 
-    if fk_name
-      target = {:name => fk_name}
-    else
-      target = attrs.fetch(:to_table)
-    end
+    target = if fk_name
+               { name: fk_name }
+             else
+               attrs.fetch(:to_table)
+             end
 
     buf.puts(<<-EOS)
 remove_foreign_key(#{table_name.inspect}, #{target.inspect})
@@ -490,7 +486,7 @@ remove_foreign_key(#{table_name.inspect}, #{target.inspect})
   def inspect_options_include_default_proc(options)
     options = options.dup
 
-    if options[:default].kind_of?(Proc)
+    if options[:default].is_a?(Proc)
       proc_default = options.delete(:default)
       proc_default = ":default=>proc{#{proc_default.call.inspect}}"
       options_inspect = options.inspect

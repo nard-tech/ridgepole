@@ -1,6 +1,6 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when drop column and index' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -60,9 +60,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -110,7 +110,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -127,12 +127,12 @@ describe 'Ridgepole::Client#diff -> migrate' do
       delta = subject.diff(expected_dsl)
       expect(delta.differ?).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
-      delta.migrate(:noop => true)
+      delta.migrate(noop: true)
       expect(subject.dump).to match_ruby actual_dsl
     }
 
     it {
-      delta = client(:bulk_change => true).diff(expected_dsl)
+      delta = client(bulk_change: true).diff(expected_dsl)
       expect(delta.differ?).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
       expect(delta.script).to match_fuzzy <<-EOS

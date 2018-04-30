@@ -1,6 +1,6 @@
 describe 'Ridgepole::Client.diff' do
   context 'when change column' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -67,9 +67,9 @@ describe 'Ridgepole::Client.diff' do
 
         add_index "titles", ["emp_no"], name: "emp_no", using: :btree
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -136,7 +136,7 @@ describe 'Ridgepole::Client.diff' do
 
         add_index "titles", ["emp_no"], name: "emp_no", using: :btree
       EOS
-    }
+    end
 
     subject { Ridgepole::Client }
 
@@ -160,7 +160,7 @@ describe 'Ridgepole::Client.diff' do
 
     it {
       expect(Ridgepole::Logger.instance).to receive(:warn).with(/definition is not found/)
-      subject.diff('', '', :tables => %w(some_table_name))
+      subject.diff('', '', tables: %w[some_table_name])
     }
   end
 end

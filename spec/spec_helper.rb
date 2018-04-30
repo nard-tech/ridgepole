@@ -1,4 +1,4 @@
-$: << File.expand_path('..', __FILE__)
+$LOAD_PATH << File.expand_path(__dir__)
 
 require 'spec_const'
 require 'spec_condition'
@@ -36,7 +36,7 @@ RSpec.configure do |config|
 
   config.before(:each) do |example|
     if conds = example.metadata[:condition]
-      skip unless Array(conds).any? {|c| condition(*c) }
+      skip unless Array(conds).any? { |c| condition(*c) }
     end
 
     case example.metadata[:file_path]
@@ -62,18 +62,16 @@ module SpecHelper
   end
 
   def system_raise_on_fail(*args)
-    unless system(*args)
-      raise "Failed to run: #{args}"
-    end
+    raise "Failed to run: #{args}" unless system(*args)
   end
 
   def restore_database_mysql
-    sql_file = File.expand_path('../mysql/ridgepole_test_database.sql', __FILE__)
+    sql_file = File.expand_path('mysql/ridgepole_test_database.sql', __dir__)
     system_raise_on_fail("#{MYSQL_CLI} < #{sql_file}")
   end
 
   def restore_database_postgresql
-    sql_file = File.expand_path('../postgresql/ridgepole_test_database.sql', __FILE__)
+    sql_file = File.expand_path('postgresql/ridgepole_test_database.sql', __dir__)
     system("#{PG_CREATEDB} ridgepole_test 2>/dev/null")
     system_raise_on_fail("#{PG_PSQL} ridgepole_test --set ON_ERROR_STOP=off -q -f #{sql_file} 2>/dev/null")
   end
@@ -87,23 +85,23 @@ module SpecHelper
   end
 
   def restore_tables_mysql
-    sql_file = File.expand_path('../mysql/ridgepole_test_tables.sql', __FILE__)
+    sql_file = File.expand_path('mysql/ridgepole_test_tables.sql', __dir__)
     system_raise_on_fail("#{MYSQL_CLI} < #{sql_file}")
   end
 
   def restore_tables_postgresql
-    sql_file = File.expand_path('../postgresql/ridgepole_test_tables.sql', __FILE__)
+    sql_file = File.expand_path('postgresql/ridgepole_test_tables.sql', __dir__)
     system_raise_on_fail("#{PG_PSQL} ridgepole_test -q -f #{sql_file} 2>/dev/null")
   end
 
   def restore_tables_mysql_unknown_column_type
-    sql_file = File.expand_path('../mysql/ridgepole_test_tables_unknown_column_type.sql', __FILE__)
+    sql_file = File.expand_path('mysql/ridgepole_test_tables_unknown_column_type.sql', __dir__)
     system_raise_on_fail("#{MYSQL_CLI} < #{sql_file}")
   end
 
   def client(options = {}, config = {})
     config = conn_spec(config)
-    default_options = {debug: condition(:debug)}
+    default_options = { debug: condition(:debug) }
     default_options[:dump_without_table_options] = true
 
     options = default_options.merge(options)
@@ -119,7 +117,7 @@ module SpecHelper
         host: TEST_PG_HOST,
         port: TEST_PG_PORT,
         username: TEST_PG_USER,
-        password: TEST_PG_PASS,
+        password: TEST_PG_PASS
       }.merge(config)
     else
       {
@@ -128,7 +126,7 @@ module SpecHelper
         host: TEST_MYSQL_HOST,
         port: TEST_MYSQL_PORT,
         username: TEST_MYSQL_USER,
-        password: TEST_MYSQL_PASS,
+        password: TEST_MYSQL_PASS
       }.merge(config)
     end
   end
@@ -151,18 +149,16 @@ module SpecHelper
   end
 
   def tempfile(basename, content = '')
-    begin
-      path = `mktemp /tmp/#{basename}.XXXXXX`
-      open(path, 'wb') {|f| f << content }
-      FileUtils.chmod(0777, path)
-      yield(path)
-    ensure
-      FileUtils.rm_f(path) if path
-    end
+    path = `mktemp /tmp/#{basename}.XXXXXX`
+    open(path, 'wb') { |f| f << content }
+    FileUtils.chmod(0o777, path)
+    yield(path)
+  ensure
+    FileUtils.rm_f(path) if path
   end
 
   def run_ridgepole(*args)
-    Dir.chdir(File.expand_path('../..', __FILE__)) do
+    Dir.chdir(File.expand_path('..', __dir__)) do
       cmd = [:bundle, :exec, './bin/ridgepole'] + args
       Open3.capture2e(cmd.join(' '))
     end

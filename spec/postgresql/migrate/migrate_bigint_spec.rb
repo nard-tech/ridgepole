@@ -2,13 +2,13 @@ describe 'Ridgepole::Client#diff -> migrate' do
   context 'when add bigint column' do
     let(:actual_dsl) { '' }
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "bigint_test", id: false, force: :cascade do |t|
           t.bigint "b"
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -22,21 +22,21 @@ describe 'Ridgepole::Client#diff -> migrate' do
   end
 
   context 'when no change' do
-    let(:dsl) {
+    let(:dsl) do
       erbh(<<-EOS)
         create_table "bigint_test", id: false, force: :cascade do |t|
           t.bigint "b"
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "bigint_test", id: false, force: :cascade do |t|
           t.bigint "b"
         end
       EOS
-    }
+    end
 
     before { subject.diff(dsl).migrate }
     subject { client }

@@ -1,7 +1,7 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when no operation' do
     let(:actual_dsl) { '' }
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -68,14 +68,14 @@ describe 'Ridgepole::Client#diff -> migrate' do
 
         add_index "titles", ["emp_no"], name: "emp_no", using: :btree
       EOS
-    }
+    end
 
     subject { client }
 
     it {
       delta = subject.diff(expected_dsl)
       expect(delta.differ?).to be_truthy
-      migrated, sql = delta.migrate(:noop => true)
+      migrated, sql = delta.migrate(noop: true)
       expect(migrated).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
 
@@ -101,14 +101,14 @@ describe 'Ridgepole::Client#diff -> migrate' do
     }
 
     it {
-      delta = client(:bulk_change => true).diff(expected_dsl)
+      delta = client(bulk_change: true).diff(expected_dsl)
       expect(delta.differ?).to be_truthy
-      migrated, sql = delta.migrate(:noop => true)
+      migrated, sql = delta.migrate(noop: true)
       expect(migrated).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
 
       # XXX:
-      expect(sql.gsub('`', '')).to match_fuzzy erbh(<<-EOS).gsub('`', '')
+      expect(sql.delete('`')).to match_fuzzy erbh(<<-EOS).delete('`')
         CREATE TABLE `clubs` (`id` <%= cond('>= 5.1','bigint NOT NULL', 'int') %> AUTO_INCREMENT PRIMARY KEY, `name` varchar(255) DEFAULT '' NOT NULL) <%= cond('< 5.2.0.beta2', 'ENGINE=InnoDB') %>
         ALTER TABLE `clubs` ADD UNIQUE INDEX `idx_name` USING btree (`name`)
         CREATE TABLE `departments` (`dept_no` <%= cond('>= 5.1','bigint NOT NULL', 'int') %> AUTO_INCREMENT PRIMARY KEY, `dept_name` varchar(40) NOT NULL) <%= cond('< 5.2.0.beta2', 'ENGINE=InnoDB') %>
@@ -130,7 +130,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
 
   context 'when no operation' do
     let(:actual_dsl) { '' }
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", default: "", null: false
@@ -197,14 +197,14 @@ describe 'Ridgepole::Client#diff -> migrate' do
 
         add_index "titles", ["emp_no"], name: "emp_no", using: :btree
       EOS
-    }
+    end
 
-    subject { client(:default_int_limit => 11) }
+    subject { client(default_int_limit: 11) }
 
     it {
       delta = subject.diff(expected_dsl)
       expect(delta.differ?).to be_truthy
-      migrated, sql = delta.migrate(:noop => true)
+      migrated, sql = delta.migrate(noop: true)
       expect(migrated).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
 

@@ -1,15 +1,15 @@
 class Ridgepole::DefaultsLimit
   DEFAULTS_LIMITS = {
-    :mysql2 => {
-      :boolean => 1,
-      :integer => 4,
-      :bigint  => 8,
-      :float   => 24,
-      :string  => 255,
-      :text    => 65535,
-      :binary  => 65535,
+    mysql2: {
+      boolean: 1,
+      integer: 4,
+      bigint: 8,
+      float: 24,
+      string: 255,
+      text: 65_535,
+      binary: 65_535
     }
-  }
+  }.freeze
 
   class << self
     def default_limit(column_type, options)

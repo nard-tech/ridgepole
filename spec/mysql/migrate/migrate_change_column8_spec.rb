@@ -1,23 +1,23 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   before { subject.diff(actual_dsl).migrate }
-  subject { client(:table_options => table_options, :dump_without_table_options => dump_without_table_options) }
+  subject { client(table_options: table_options, dump_without_table_options: dump_without_table_options) }
 
   let(:warning_regexp) { /table options differ/ }
   let(:dump_without_table_options) { false }
 
-  let(:actual_dsl) {
+  let(:actual_dsl) do
     erbh(<<-EOS)
       create_table "employees", primary_key: "emp_no", force: :cascade, options: 'ENGINE=InnoDB DEFAULT CHARSET=utf8' do |t|
       end
     EOS
-  }
+  end
 
-  let(:expected_dsl) {
+  let(:expected_dsl) do
     erbh(<<-EOS)
       create_table :employees, primary_key: :emp_no, force: :cascade do |t|
       end
     EOS
-  }
+  end
 
   context 'when change options (no change)' do
     let(:table_options) { 'ENGINE=InnoDB DEFAULT CHARSET=utf8' }

@@ -1,6 +1,6 @@
 describe 'Ridgepole::Client#diff -> migrate' do
   context 'when add column' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", limit: 255, default: "", null: false
@@ -58,9 +58,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "idx_titles_emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "clubs", force: :cascade do |t|
           t.string "name", limit: 255, default: "", null: false
@@ -121,7 +121,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.index ["emp_no"], name: "idx_titles_emp_no", <%= i cond(5.0, using: :btree) %>
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -135,7 +135,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
     }
 
     it {
-      delta = client(:bulk_change => true).diff(expected_dsl)
+      delta = client(bulk_change: true).diff(expected_dsl)
       expect(delta.differ?).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
       expect(delta.script).to match_fuzzy <<-EOS
@@ -154,7 +154,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
   end
 
   context 'when add column (int/noop)' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       erbh(<<-EOS)
         create_table "dept_emp", id: false, force: :cascade do |t|
           t.integer "emp_no", null: false
@@ -163,9 +163,9 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.date    "to_date", null: false
         end
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       erbh(<<-EOS)
         create_table "dept_emp", id: false, force: :cascade do |t|
           t.integer "emp_no", null: false
@@ -175,7 +175,7 @@ describe 'Ridgepole::Client#diff -> migrate' do
           t.date    "to_date", null: false
         end
       EOS
-    }
+    end
 
     before { subject.diff(actual_dsl).migrate }
     subject { client }
@@ -184,11 +184,11 @@ describe 'Ridgepole::Client#diff -> migrate' do
       delta = subject.diff(expected_dsl)
       expect(delta.differ?).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
-      migrated, sql = delta.migrate(:noop => true)
+      migrated, sql = delta.migrate(noop: true)
       expect(migrated).to be_truthy
       expect(subject.dump).to match_ruby actual_dsl
 
-      expect(sql).to match_fuzzy("ALTER TABLE \"dept_emp\" ADD \"emp_no2\" integer NOT NULL")
+      expect(sql).to match_fuzzy('ALTER TABLE "dept_emp" ADD "emp_no2" integer NOT NULL')
     }
   end
 end

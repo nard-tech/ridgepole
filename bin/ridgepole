@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-$: << File.expand_path('../../lib', __FILE__)
+$LOAD_PATH << File.expand_path('../lib', __dir__)
 require 'rubygems'
 require 'yaml'
 require 'optparse'
@@ -11,22 +11,22 @@ $stdout.sync = true
 $stderr.sync = true
 
 Version = Ridgepole::VERSION
-DEFAULT_FILENAME = 'Schemafile'
+DEFAULT_FILENAME = 'Schemafile'.freeze
 
-MAGIC_COMMENT = <<-EOS
+MAGIC_COMMENT = <<-EOS.freeze
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 EOS
 
 COLUMN_TYPES = {
-  :boolean => :bool,
-  :integer => :int,
-  :bigint  => :bigint,
-  :float   => :float,
-  :string  => :string,
-  :text    => :text,
-  :binary  => :binary,
-}
+  boolean: :bool,
+  integer: :int,
+  bigint: :bigint,
+  float: :float,
+  string: :string,
+  text: :text,
+  binary: :binary
+}.freeze
 
 config = nil
 env = 'development'
@@ -39,9 +39,9 @@ diff_with_apply = false
 exit_code = 0
 
 options = {
-  :dry_run => false,
-  :debug   => false,
-  :color   => $stdout.tty?,
+  dry_run: false,
+  debug: false,
+  color: $stdout.tty?
 }
 
 set_mode = proc do |m|
@@ -50,13 +50,11 @@ set_mode = proc do |m|
 end
 
 def noop_migrate(delta, options)
-  unless delta.script.empty?
-    puts delta.script + "\n\n"
-  end
+  puts delta.script + "\n\n" unless delta.script.empty?
 
   migrated, out = delta.migrate(
-    :noop => true,
-    :alter_extra => options[:alter_extra]
+    noop: true,
+    alter_extra: options[:alter_extra]
   )
 
   if migrated
@@ -64,98 +62,98 @@ def noop_migrate(delta, options)
       if line =~ /\A\s+/
         puts "# #{line}"
       else
-        puts line.strip.gsub(/([^\d])([(),])([^\d])/) { "#{$1}#{$2}\n#{$3}" }.each_line.map {|i| "# #{i.gsub(/^\s+/, '')}"}.join + "\n"
+        puts line.strip.gsub(/([^\d])([(),])([^\d])/) { "#{Regexp.last_match(1)}#{Regexp.last_match(2)}\n#{Regexp.last_match(3)}" }.each_line.map { |i| "# #{i.gsub(/^\s+/, '')}" }.join + "\n"
       end
     end
   end
 
-  return migrated
+  migrated
 end
 
 ARGV.options do |opt|
   begin
-    opt.on('-c', '--config CONF_OR_FILE')         {|v| config = v                                           }
-    opt.on('-E', '--env ENVIRONMENT')             {|v| env = v                                              }
+    opt.on('-c', '--config CONF_OR_FILE')         { |v| config = v                                           }
+    opt.on('-E', '--env ENVIRONMENT')             { |v| env = v                                              }
     opt.on('-a', '--apply')                       {    set_mode[:apply]                                     }
     opt.on('-m', '--merge')                       {    set_mode[:apply]; options[:merge] = true             }
-    opt.on('-f', '--file SCHEMAFILE')             {|v| file = v                                             }
-    opt.on('',   '--dry-run')                     {    options[:dry_run] = true                             }
-    opt.on('',   '--table-options OPTIONS')       {|v| options[:table_options] = v                          }
-    opt.on('',   '--alter-extra ALTER_SPEC')      {|v| options[:alter_extra] = v                            }
-    opt.on('',   '--external-script SCRIPT')      {|v| options[:external_script] = v                        }
-    opt.on('',   '--bulk-change') {
-      raise OptionParser::InvalidOption, "Cannot use `bulk-change` in `merge`" if options[:merge]
+    opt.on('-f', '--file SCHEMAFILE')             { |v| file = v }
+    opt.on('',   '--dry-run')                     { options[:dry_run] = true }
+    opt.on('',   '--table-options OPTIONS')       { |v| options[:table_options] = v                          }
+    opt.on('',   '--alter-extra ALTER_SPEC')      { |v| options[:alter_extra] = v                            }
+    opt.on('',   '--external-script SCRIPT')      { |v| options[:external_script] = v                        }
+    opt.on('',   '--bulk-change') do
+      raise OptionParser::InvalidOption, 'Cannot use `bulk-change` in `merge`' if options[:merge]
       options[:bulk_change] = true
-    }
-
-    COLUMN_TYPES.each do |column_type, column_type_alias|
-      opt.on('', "--default-#{column_type_alias}-limit LIMIT", Integer) {|v|
-        options[:"default_#{column_type}_limit"] = v
-      }
     end
 
-    opt.on('',   '--pre-query QUERY')             {|v| options[:pre_query] = v                              }
-    opt.on('',   '--post-query QUERY')            {|v| options[:post_query] = v                             }
-    opt.on('-e', '--export')                      {    set_mode[:export]                                    }
-    opt.on('',   '--split')                       {|v| split = true                                         }
-    opt.on('',   '--split-with-dir')              {|v| split = :with_dir                                    }
-    opt.on('-d', '--diff DSL1 DSL2') {|diff_arg1|
+    COLUMN_TYPES.each do |column_type, column_type_alias|
+      opt.on('', "--default-#{column_type_alias}-limit LIMIT", Integer) do |v|
+        options[:"default_#{column_type}_limit"] = v
+      end
+    end
+
+    opt.on('',   '--pre-query QUERY')             { |v| options[:pre_query] = v                              }
+    opt.on('',   '--post-query QUERY')            { |v| options[:post_query] = v                             }
+    opt.on('-e', '--export')                      { set_mode[:export] }
+    opt.on('',   '--split')                       { |_v| split = true                                         }
+    opt.on('',   '--split-with-dir')              { |_v| split = :with_dir                                    }
+    opt.on('-d', '--diff DSL1 DSL2') do |diff_arg1|
       set_mode[:diff]
       diff_arg2 = ARGV.first
 
-      if [diff_arg1, diff_arg2].any? {|i| i.nil? or i =~ /\A-/ }
+      if [diff_arg1, diff_arg2].any? { |i| i.nil? || i =~ /\A-/ }
         puts opt.help
         exit 1
       end
 
       ARGV.shift
       diff_files = [diff_arg1, diff_arg2]
-    }
-    opt.on('',   '--with-apply')                                 {    diff_with_apply = true                               }
-    opt.on('-o', '--output SCHEMAFILE')                          {|v| output_file = v                                      }
-    opt.on('-t', '--tables TABLES', Array)                       {|v| options[:tables] = v                                 }
-    opt.on('',   '--ignore-tables REGEX_LIST', Array)            {|v| options[:ignore_tables] = v.map {|i| Regexp.new(i) } }
+    end
+    opt.on('',   '--with-apply')                                 { diff_with_apply = true }
+    opt.on('-o', '--output SCHEMAFILE')                          { |v| output_file = v                                      }
+    opt.on('-t', '--tables TABLES', Array)                       { |v| options[:tables] = v                                 }
+    opt.on('',   '--ignore-tables REGEX_LIST', Array)            { |v| options[:ignore_tables] = v.map { |i| Regexp.new(i) } }
     opt.on('',   '--mysql-use-alter')                            {    options[:mysql_use_alter] = true                     }
     opt.on('',   '--dump-without-table-options')                 {    options[:dump_without_table_options] = true          }
     opt.on('',   '--dump-with-default-fk-name')                  {    options[:dump_with_default_fk_name] = true           }
     opt.on('',   '--index-removed-drop-column')                  {    options[:index_removed_drop_column] = true           }
     opt.on('',   '--skip-drop-table')                            {    options[:skip_drop_table] = true                     }
     opt.on('',   '--mysql-change-table-options')                 {    options[:mysql_change_table_options] = true          }
-    opt.on('',   '--check-relation-type DEF_PK')                 {|v| options[:check_relation_type] = v                    }
+    opt.on('',   '--check-relation-type DEF_PK')                 { |v| options[:check_relation_type] = v }
     opt.on('',   '--ignore-table-comment')                       {    options[:ignore_table_comment] = true                }
     opt.on('',   '--skip-column-comment-change')                 {    options[:skip_column_comment_change] = true          }
     opt.on('',   '--allow-pk-change')                            {    options[:allow_pk_change] = true                     }
     opt.on('',   '--create-table-with-index')                    {    options[:create_table_with_index] = true             }
 
-    opt.on('',   '--mysql-dump-auto-increment') {
+    opt.on('',   '--mysql-dump-auto-increment') do
       if Gem::Version.new(ActiveRecord::VERSION::STRING) < Gem::Version.new('5.1')
         raise OptionParser::InvalidOption, '`mysql-dump-auto-increment` is not available in `activerecord < 5.1`'
       end
 
       options[:mysql_dump_auto_increment] = true
-    }
+    end
 
-    opt.on('-r', '--require LIBS', Array)                        {|v| v.each {|i| require i }                              }
-    opt.on(''  , '--log-file LOG_FILE')                          {|v| options[:log_file] = v                               }
-    opt.on(''  , '--verbose')                                    {    Ridgepole::Logger.verbose = true                     }
-    opt.on(''  , '--debug')                                      {    options[:debug] = true                               }
-    opt.on(''  , '--[no-]color')                                 {|v| options[:color] = v                                  }
+    opt.on('-r', '--require LIBS', Array)                        { |v| v.each { |i| require i } }
+    opt.on('', '--log-file LOG_FILE')                          { |v| options[:log_file] = v }
+    opt.on('', '--verbose')                                    {    Ridgepole::Logger.verbose = true                     }
+    opt.on('', '--debug')                                      {    options[:debug] = true                               }
+    opt.on('', '--[no-]color')                                 { |v| options[:color] = v }
 
-    opt.on('-v', '--version') {
+    opt.on('-v', '--version') do
       puts opt.ver
       exit
-    }
+    end
 
     opt.parse!
 
-    if not mode or ([:apply, :export].include?(mode) and not config) or  (options[:with_apply] and not config)
+    if !mode || (%i[apply export].include?(mode) && !config) || (options[:with_apply] && !config)
       puts opt.help
       exit 1
     end
-  rescue => e
-    $stderr.puts("[ERROR] #{e.message}")
+  rescue StandardError => e
+    warn("[ERROR] #{e.message}")
 
-    unless e.kind_of?(OptionParser::ParseError)
+    unless e.is_a?(OptionParser::ParseError)
       puts "\t" + e.backtrace.join("\n\t")
     end
 
@@ -220,46 +218,40 @@ begin
       end
     end
   when :apply
-    unless File.exist?(file)
-      raise "No Schemafile found (looking for: #{file})"
-    end
+    raise "No Schemafile found (looking for: #{file})" unless File.exist?(file)
 
     msg = (options[:merge] ? 'Merge' : 'Apply') + " `#{file}`"
     msg << ' (dry-run)' if options[:dry_run]
     logger.info(msg)
 
     dsl = File.read(file)
-    delta = client.diff(dsl, :path => file)
+    delta = client.diff(dsl, path: file)
     differ = delta.differ?
 
     if options[:dry_run]
-      if differ
-        differ = noop_migrate(delta, options)
-      end
+      differ = noop_migrate(delta, options) if differ
     else
       logger.verbose_info('# Update schema')
 
       differ, out = delta.migrate(
-        :external_script => options[:external_script],
-        :alter_extra => options[:alter_extra]
+        external_script: options[:external_script],
+        alter_extra: options[:alter_extra]
       )
     end
 
-    unless differ
-      logger.info('No change')
-    end
+    logger.info('No change') unless differ
   when :diff
     diff_files = diff_files.map do |file|
       if File.exist?(file)
         file_ext = File.extname(file)
 
-        if %w(.yml .yaml).include?(file_ext)
+        if %w[.yml .yaml].include?(file_ext)
           Ridgepole::Config.load(file, env)
         else
           File.open(file)
         end
       else
-        YAML.load(file)
+        YAML.safe_load(file)
       end
     end
 
@@ -269,23 +261,19 @@ begin
       logger.verbose_info('# Update schema')
       differ = delta.differ?
 
-      if differ
-        differ, out = delta.migrate
-      end
+      differ, out = delta.migrate if differ
 
-      if differ
-        logger.info('No change')
-      end
+      logger.info('No change') if differ
     elsif delta.differ?
       differ = noop_migrate(delta, options)
       exit_code = 1 if differ
     end
   end
-rescue => e
+rescue StandardError => e
   if options[:debug]
     raise e
   else
-    $stderr.puts("[ERROR] #{[e.message, e.backtrace.first].join("\n\t")}")
+    warn("[ERROR] #{[e.message, e.backtrace.first].join("\n\t")}")
     exit 1
   end
 end

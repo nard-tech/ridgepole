@@ -10,7 +10,7 @@ class Ridgepole::DSLParser
     end
 
     def self.eval(dsl, opts = {})
-      ctx = self.new(opts)
+      ctx = new(opts)
 
       if opts[:path]
         ctx.instance_eval(dsl, opts[:path])
@@ -25,10 +25,10 @@ class Ridgepole::DSLParser
       table_name = table_name.to_s
       table_definition = TableDefinition.new(table_name, self)
 
-      if options[:primary_key] and options[:primary_key].is_a?(Symbol)
+      if options[:primary_key] && options[:primary_key].is_a?(Symbol)
         options[:primary_key] = options[:primary_key].to_s
       end
-      if options[:id] and TableDefinition::ALIAS_TYPES.has_key?(options[:id])
+      if options[:id] && TableDefinition::ALIAS_TYPES.key?(options[:id])
         type, type_default_opts = TableDefinition::ALIAS_TYPES[options[:id]]
         options[:id] = type
         options = type_default_opts.merge(options)
@@ -51,7 +51,7 @@ class Ridgepole::DSLParser
       # Keep column_name for expression index support
       # https://github.com/rails/rails/pull/23393
       unless column_name.is_a?(String) && /\W/ === column_name
-        column_name = [column_name].flatten.map {|i| i.to_s }
+        column_name = [column_name].flatten.map(&:to_s)
       end
       options[:name] = options[:name].to_s if options[:name]
       @__definition[table_name] ||= {}
@@ -76,8 +76,8 @@ class Ridgepole::DSLParser
       end
 
       @__definition[table_name][:indices][idx] = {
-        :column_name => column_name,
-        :options => options,
+        column_name: column_name,
+        options: options
       }
     end
 
@@ -94,13 +94,13 @@ class Ridgepole::DSLParser
       end
 
       @__definition[from_table][:foreign_keys][idx] = {
-        :to_table => to_table,
-        :options => options,
+        to_table: to_table,
+        options: options
       }
     end
 
     def require(file)
-      schemafile = (file =~ %r|\A/|) ? file : File.join(@__working_dir, file)
+      schemafile = file =~ %r{\A/} ? file : File.join(@__working_dir, file)
 
       if File.exist?(schemafile)
         instance_eval(File.read(schemafile), schemafile)
@@ -111,10 +111,10 @@ class Ridgepole::DSLParser
       end
     end
 
-    def execute(sql, name = nil, &cond)
+    def execute(sql, _name = nil, &cond)
       @__execute << {
-        :sql => sql,
-        :condition => cond,
+        sql: sql,
+        condition: cond
       }
     end
   end

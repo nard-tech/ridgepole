@@ -12,8 +12,8 @@ class Ridgepole::DSLParser
       name = name.to_s
 
       @__definition[name] = {
-        :type => type,
-        :options => options,
+        type: type,
+        options: options
       }
     end
 
@@ -64,39 +64,39 @@ class Ridgepole::DSLParser
       :virtual,
 
       # https://github.com/rails/rails/blob/v5.0.4/activerecord/lib/active_record/connection_adapters/abstract_mysql_adapter.rb#L53
-      :json,
+      :json
     ].uniq
 
     TYPES.each do |column_type|
       define_method column_type do |*args|
         options = args.extract_options!
         column_names = args
-        column_names.each {|name| column(name, column_type, options) }
+        column_names.each { |name| column(name, column_type, options) }
       end
     end
 
     ALIAS_TYPES = {
       # https://github.com/rails/rails/blob/v5.0.0.rc1/activerecord/lib/active_record/connection_adapters/mysql/schema_definitions.rb
-      tinyblob: [:blob, {limit: 255}],
-      mediumblob: [:binary, {limit: 16777215}],
-      longblob: [:binary, {limit: 4294967295}],
-      tinytext: [:text, {limit: 255}],
-      mediumtext: [:text, {limit: 16777215}],
-      longtext: [:text, {limit: 4294967295}],
-      unsigned_integer: [:integer, {unsigned: true}],
-      unsigned_bigint: [:bigint, {unsigned: true}],
-      unsigned_float: [:float, {limit: 24, unsigned: true}],
-      unsigned_decimal: [:decimal, {precision: 10, unsigned: true}],
-    }
+      tinyblob: [:blob, { limit: 255 }],
+      mediumblob: [:binary, { limit: 16_777_215 }],
+      longblob: [:binary, { limit: 4_294_967_295 }],
+      tinytext: [:text, { limit: 255 }],
+      mediumtext: [:text, { limit: 16_777_215 }],
+      longtext: [:text, { limit: 4_294_967_295 }],
+      unsigned_integer: [:integer, { unsigned: true }],
+      unsigned_bigint: [:bigint, { unsigned: true }],
+      unsigned_float: [:float, { limit: 24, unsigned: true }],
+      unsigned_decimal: [:decimal, { precision: 10, unsigned: true }]
+    }.freeze
 
     # XXX:
     def blob(*args)
       options = args.extract_options!
-      options = {limit: 65535}.merge(options)
+      options = { limit: 65_535 }.merge(options)
       column_names = args
 
       column_names.each do |name|
-        column_type = (0..0xff).include?(options[:limit]) ? :blob : :binary
+        column_type = (0..0xff).cover?(options[:limit]) ? :blob : :binary
         column(name, column_type, options)
       end
     end
@@ -106,7 +106,7 @@ class Ridgepole::DSLParser
         options = args.extract_options!
         options = default_options.merge(options)
         column_names = args
-        column_names.each {|name| column(name, column_type, options) }
+        column_names.each { |name| column(name, column_type, options) }
       end
     end
 
@@ -115,7 +115,7 @@ class Ridgepole::DSLParser
     end
 
     def timestamps(*args)
-      options = {:null => false}.merge(args.extract_options!)
+      options = { null: false }.merge(args.extract_options!)
       column(:created_at, :datetime, options)
       column(:updated_at, :datetime, options)
     end
@@ -123,7 +123,7 @@ class Ridgepole::DSLParser
     def references(*args)
       options = args.extract_options!
       polymorphic = options.delete(:polymorphic)
-      index_options = options.has_key?(:index) ? options.delete(:index) : true
+      index_options = options.key?(:index) ? options.delete(:index) : true
       type = options.delete(:type) || DEFAULT_PRIMARY_KEY_TYPE
 
       args.each do |col|
@@ -135,6 +135,6 @@ class Ridgepole::DSLParser
         end
       end
     end
-    alias :belongs_to :references
+    alias belongs_to references
   end
 end

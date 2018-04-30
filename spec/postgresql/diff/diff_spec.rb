@@ -4,7 +4,7 @@ describe 'Ridgepole::Client.diff' do
   end
 
   context 'when change column' do
-    let(:actual_dsl) {
+    let(:actual_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", limit: 255, default: "", null: false
@@ -70,9 +70,9 @@ describe 'Ridgepole::Client.diff' do
 
         add_index "titles", ["emp_no"], name: "idx_titles_emp_no", using: :btree
       EOS
-    }
+    end
 
-    let(:expected_dsl) {
+    let(:expected_dsl) do
       <<-EOS
         create_table "clubs", force: :cascade do |t|
           t.string "name", limit: 255, default: "", null: false
@@ -138,7 +138,7 @@ describe 'Ridgepole::Client.diff' do
 
         add_index "titles", ["emp_no"], name: "idx_titles_emp_no", using: :btree
       EOS
-    }
+    end
 
     subject { Ridgepole::Client }
 

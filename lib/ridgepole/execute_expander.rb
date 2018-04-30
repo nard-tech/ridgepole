@@ -16,7 +16,7 @@ class Ridgepole::ExecuteExpander
         if sql =~ /\A(SELECT|SHOW)\b/i
           begin
             super(sql, name)
-          rescue
+          rescue StandardError
             Stub.new
           end
         else
@@ -39,7 +39,7 @@ class Ridgepole::ExecuteExpander
     private
 
     def append_alter_extra(sql)
-      if Ridgepole::ExecuteExpander.alter_extra and sql =~ /\AALTER\b/i
+      if Ridgepole::ExecuteExpander.alter_extra && sql =~ /\AALTER\b/i
         sql = sql + ',' + Ridgepole::ExecuteExpander.alter_extra
       end
 
@@ -47,42 +47,36 @@ class Ridgepole::ExecuteExpander
     end
   end
 
-  cattr_accessor :noop,         :instance_writer => false, :instance_reader => false
-  cattr_accessor :callback,     :instance_writer => false, :instance_reader => false
-  cattr_accessor :use_script,   :instance_writer => false, :instance_reader => false
-  cattr_accessor :sql_executer, :instance_writer => false, :instance_reader => false
-  cattr_accessor :alter_extra,  :instance_writer => false, :instance_reader => false
+  cattr_accessor :noop,         instance_writer: false, instance_reader: false
+  cattr_accessor :callback,     instance_writer: false, instance_reader: false
+  cattr_accessor :use_script,   instance_writer: false, instance_reader: false
+  cattr_accessor :sql_executer, instance_writer: false, instance_reader: false
+  cattr_accessor :alter_extra,  instance_writer: false, instance_reader: false
 
   class << self
     def without_operation(callback = nil)
-      begin
-        self.noop = true
-        self.callback = callback
-        yield
-      ensure
-        self.noop = false
-        self.callback = nil
-      end
+      self.noop = true
+      self.callback = callback
+      yield
+    ensure
+      self.noop = false
+      self.callback = nil
     end
 
     def with_script(script, logger)
-      begin
-        self.use_script = true
-        self.sql_executer = Ridgepole::ExternalSqlExecuter.new(script, logger)
-        yield
-      ensure
-        self.use_script = false
-        self.sql_executer = nil
-      end
+      self.use_script = true
+      self.sql_executer = Ridgepole::ExternalSqlExecuter.new(script, logger)
+      yield
+    ensure
+      self.use_script = false
+      self.sql_executer = nil
     end
 
     def with_alter_extra(extra)
-      begin
-        self.alter_extra = extra
-        yield
-      ensure
-        self.alter_extra = nil
-      end
+      self.alter_extra = extra
+      yield
+    ensure
+      self.alter_extra = nil
     end
 
     def expand_execute(connection)
