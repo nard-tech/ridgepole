@@ -65,6 +65,17 @@ class Ridgepole::DSLParser
 
       # https://github.com/rails/rails/blob/v5.0.4/activerecord/lib/active_record/connection_adapters/abstract_mysql_adapter.rb#L53
       :json,
+
+      # https://github.com/rgeo/activerecord-postgis-adapter/blob/master/lib/active_record/connection_adapters/postgis_adapter.rb#L41
+      :geography,
+      :geometry,
+      :geometry_collection,
+      :line_string,
+      :multi_line_strin,
+      :multi_point,
+      :multi_polygon,
+      :st_point,
+      :st_polygon
     ].uniq
 
     TYPES.each do |column_type|
@@ -87,6 +98,9 @@ class Ridgepole::DSLParser
       unsigned_bigint: [:bigint, {unsigned: true}],
       unsigned_float: [:float, {limit: 24, unsigned: true}],
       unsigned_decimal: [:decimal, {precision: 10, unsigned: true}],
+
+      # https://github.com/rgeo/activerecord-postgis-adapter/blob/master/lib/active_record/connection_adapters/postgis/schema_statements.rb#L65
+      spatial: [:geometry]
     }
 
     # XXX:
